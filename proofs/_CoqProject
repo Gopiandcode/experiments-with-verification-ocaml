@@ -1,0 +1,3 @@
+-R ../_build/default/proofs Proofs
+
+../_build/default/proofs/Stack.v

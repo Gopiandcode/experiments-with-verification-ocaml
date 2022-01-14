@@ -1,0 +1,10 @@
+(coq.theory
+ (name Proofs)
+ (modules Stack VerifyStack))
+
+
+(rule
+ (target Stack.v)
+ (deps ../lib/stack.ml)
+ (action (run cfmlc -o ./Stack.v ../lib/stack.ml))
+)
