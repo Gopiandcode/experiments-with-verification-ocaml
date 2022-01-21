@@ -7,7 +7,7 @@ Generalizable Variables A.
 Implicit Types n m: int.
 Implicit Types p q : loc.
 
-From Proofs Require Import Lists.
+From Proofs Require Import List_set_at_ind_old.
 
 Fixpoint with_nth (A: Type) (i: nat) (x: A) (ls: list A) {struct ls} :=
   match ls with
