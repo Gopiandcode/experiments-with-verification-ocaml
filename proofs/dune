@@ -1,6 +1,6 @@
 (coq.theory
  (name Proofs)
- (modules Stack VerifyStack Quadtree VerifyQuadtree Refs VerifyRefs))
+ (modules Stack VerifyStack Quadtree VerifyQuadtree Refs VerifyRefs Lists VerifyLists))
 
 
 (rule
@@ -19,4 +19,10 @@
  (target Quadtree.v)
  (deps ../lib/quadtree.ml)
  (action (run cfmlc -o ./Quadtree.v ../lib/quadtree.ml))
+)
+
+(rule
+ (target Lists.v)
+ (deps ../lib/lists.ml)
+ (action (run cfmlc -o ./Lists.v ../lib/lists.ml))
 )
