@@ -1,6 +1,9 @@
 (coq.theory
  (name Proofs)
- (modules Stack VerifyStack Quadtree VerifyQuadtree Refs VerifyRefs List_set_at_ind_old Verify_list_set_at_ind_old))
+ (modules Stack VerifyStack Quadtree VerifyQuadtree Refs VerifyRefs
+          List_set_at_ind_old Verify_list_set_at_ind_old
+          List_set_at_ind_new Verify_list_set_at_ind_new
+))
 
 
 (rule
@@ -25,4 +28,10 @@
  (target List_set_at_ind_old.v)
  (deps ../lib/list_set_at_ind_old.ml)
  (action (run cfmlc -o ./List_set_at_ind_old.v ../lib/list_set_at_ind_old.ml))
+)
+
+(rule
+ (target List_set_at_ind_new.v)
+ (deps ../lib/list_set_at_ind_new.ml)
+ (action (run cfmlc -o ./List_set_at_ind_new.v ../lib/list_set_at_ind_new.ml))
 )
