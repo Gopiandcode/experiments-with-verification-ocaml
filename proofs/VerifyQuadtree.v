@@ -1,4 +1,3 @@
-
 Set Implicit Arguments.
 
 From CFML Require Import WPLib Stdlib.
@@ -8,21 +7,24 @@ Generalizable Variables A.
 Implicit Types n m: int.
 Implicit Types p q : loc.
 
-From Proofs Require Import Stack.
+From Proofs Require Import Quadtree.
 
 Definition Stack A `{EA:Enc A} (L:list A) (r:loc) : hprop :=
-      r ~~~> `{ Stack.contents' := L }.
+  \exists n,
+      r ~~~> `{ Stack.contents' := L; Stack.length' := n }
+   \* \[ n = length L ].
 
 Lemma Stack_eq : forall r A `{EA:Enc A} (L:list A),
   (r ~> Stack L) =
-  (r ~~~> `{ Stack.contents' := L }).
+  (\exists n, r ~~~> `{ Stack.contents' := L; Stack.length' := n } \* \[ n = length L ]).
 Proof using. auto. Qed.
 
 Arguments Stack_eq : clear implicits.
 
 Lemma Stack_open : forall r A (L:list A),
     r ~> Stack L ==>
-        r ~~~> `{ contents' := L }.
+      \exists n,
+        r ~~~> `{ contents' := L; length' := n } \* \[ n = length L ].
 Proof using.
   dup 2.
   { intros. xunfold Stack. auto. 
@@ -31,7 +33,8 @@ Proof using.
 Qed.
 
 Lemma Stack_close : forall r A (L:list A) (n:int),
-    r ~~~> `{ contents' := L } ==>
+    n = length L ->
+    r ~~~> `{ contents' := L; length' := n } ==>
       r ~> Stack L.
 Proof using. intros. xunfolds~ Stack. Qed.
 
@@ -59,9 +62,9 @@ Proof using.
      [xopen], [xclose] and [rew_list] *)
   (* <EXO> *)
   xcf.
-  xunfolds~ Stack.
-  xapp. xapp. 
-  xunfolds~ Stack. 
+  xunfolds~ Stack ;=> n Hn.
+  xapp. xapp. xapp. xapp.
+  xunfolds~ Stack. rew_list. math.
 Qed.
 
 Lemma pop_spec : forall A `{EA:Enc A} (L:list A) (s:loc),
@@ -76,8 +79,10 @@ Lemma pop_spec : forall A `{EA:Enc A} (L:list A) (s:loc),
 Proof using.
   introv HL. xcf.
   xunfolds~ Stack.
+  intros n Hn.
   xapp.
   xmatch.
-  xapp.  xval.
+  xapp. xapp. xapp. xval.
   xunfolds~ Stack.
+  rew_list in *. math.
 Qed.

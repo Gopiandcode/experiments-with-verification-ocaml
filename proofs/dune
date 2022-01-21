@@ -1,10 +1,22 @@
 (coq.theory
  (name Proofs)
- (modules Stack VerifyStack))
+ (modules Stack VerifyStack Quadtree VerifyQuadtree Refs VerifyRefs))
 
+
+(rule
+ (target Refs.v)
+ (deps ../lib/refs.ml)
+ (action (run cfmlc -o ./Refs.v ../lib/refs.ml))
+)
 
 (rule
  (target Stack.v)
  (deps ../lib/stack.ml)
  (action (run cfmlc -o ./Stack.v ../lib/stack.ml))
+)
+
+(rule
+ (target Quadtree.v)
+ (deps ../lib/quadtree.ml)
+ (action (run cfmlc -o ./Quadtree.v ../lib/quadtree.ml))
 )
