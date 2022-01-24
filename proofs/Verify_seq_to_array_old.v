@@ -9,7 +9,6 @@ Implicit Types p q : loc.
 
 From Proofs Require Import Seq_to_array_old.
 
-Check (fun h nxt => Cons h nxt).
 
 
 Fixpoint MSeq A `{EA: Enc A} (ls: list A) (f: val) : hprop :=

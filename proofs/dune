@@ -4,6 +4,8 @@
           List_set_at_ind_old Verify_list_set_at_ind_old
           List_set_at_ind_new Verify_list_set_at_ind_new
           Seq_to_array_old Verify_seq_to_array_old
+          Vector_filter_old Verify_vector_filter_old
+          Vector_filter_new
 ))
 
 
@@ -42,3 +44,16 @@
  (deps ../lib/seq_to_array_old.ml)
  (action (run cfmlc -o ./Seq_to_array_old.v ../lib/seq_to_array_old.ml))
 )
+
+(rule
+ (target Vector_filter_old.v)
+ (deps ../lib/vector_filter_old.ml)
+ (action (run cfmlc -o ./Vector_filter_old.v ../lib/vector_filter_old.ml))
+)
+
+(rule
+ (target Vector_filter_new.v)
+ (deps ../lib/vector_filter_new.ml)
+ (action (run cfmlc -o ./Vector_filter_new.v ../lib/vector_filter_new.ml))
+)
+
