@@ -3,6 +3,7 @@
  (modules Stack VerifyStack Quadtree VerifyQuadtree Refs VerifyRefs
           List_set_at_ind_old Verify_list_set_at_ind_old
           List_set_at_ind_new Verify_list_set_at_ind_new
+          Seq_to_array_old Verify_seq_to_array_old
 ))
 
 
@@ -34,4 +35,10 @@
  (target List_set_at_ind_new.v)
  (deps ../lib/list_set_at_ind_new.ml)
  (action (run cfmlc -o ./List_set_at_ind_new.v ../lib/list_set_at_ind_new.ml))
+)
+
+(rule
+ (target Seq_to_array_old.v)
+ (deps ../lib/seq_to_array_old.ml)
+ (action (run cfmlc -o ./Seq_to_array_old.v ../lib/seq_to_array_old.ml))
 )
