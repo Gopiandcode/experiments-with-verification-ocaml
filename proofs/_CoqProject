@@ -4,3 +4,5 @@
 ../_build/default/proofs/Stack.v
 ../_build/default/proofs/Quadtree.v
 ../_build/default/proofs/Refs.v
+../_build/default/proofs/Cascade.v
+../_build/default/proofs/Cascade_Spec.v

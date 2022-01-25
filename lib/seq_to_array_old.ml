@@ -22,7 +22,7 @@ let rec fold f acc res = match res () with
   | Nil -> acc
   | Cons (s, cont) -> fold f (f acc s) cont
 
-let length l = fold (fun acc _ -> acc+1) 0 l
+let length' l = fold (fun acc _ -> acc+1) 0 l
 
 let iteri f l =
   let rec aux f l i = match l() with
@@ -37,7 +37,7 @@ let to_array l =
   match l() with
   | Nil -> [| |]
   | Cons (x, _) ->
-    let n = length l in
+    let n = length' l in
     let a = Array.make n x in (* need first elem to create [a] *)
     iteri
       (fun i x -> a.(i) <- x)

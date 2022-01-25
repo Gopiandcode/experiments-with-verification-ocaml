@@ -93,39 +93,40 @@ Proof.
     ).
   
 
-  xletrec
-    (fun (f: val) =>
-       forall (iv: int), iv <= length l ->
-       let (D_pre, D_post) := list_take_drop (Z.to_nat iv) D in
-       let (D_pre', D_post') := list_take_drop (Z.to_nat (min (iv + 1) (length l))) D in
-       SPEC (f val_unit)
-       PRE (
-           i ~~> iv \*
-           j ~~> (List.length (List.filter f_p D_pre)) \*
-           data ~> Array ((List.filter f_p D_pre) ++ list_drop (List.length (List.filter f_p D_pre)) D)
-       )
-       POSTUNIT (
-           i ~~> (min (iv + 1) (length l)) \*
-           j ~~> (List.length (List.filter f_p D_pre')) \*
-           data ~> Array ((List.filter f_p D_pre') ++ list_drop (List.length (List.filter f_p D_pre')) D)
-       )
-    ).
-  {
-    intros iv Hiv.
-    case_eq (list_take_drop (to_nat iv) D); intros D_pre D_post HDiv.
-    case_eq (list_take_drop (to_nat (min (iv + 1) (length l))) D); intros D_pre' D_post' HDiv'.
-    xapp.
-    apply Body_loop.
-    xsimpl.
+  (* xletrec *)
+  (*   (fun (f: val) => *)
+  (*      forall (iv: int), iv <= length l -> *)
+  (*      let (D_pre, D_post) := list_take_drop (Z.to_nat iv) D in *)
+  (*      let (D_pre', D_post') := list_take_drop (Z.to_nat (min (iv + 1) (length l))) D in *)
+  (*      SPEC (f val_unit) *)
+  (*      PRE ( *)
+  (*          i ~~> iv \* *)
+  (*          j ~~> (List.length (List.filter f_p D_pre)) \* *)
+  (*          data ~> Array ((List.filter f_p D_pre) ++ list_drop (List.length (List.filter f_p D_pre)) D) *)
+  (*      ) *)
+  (*      POSTUNIT ( *)
+  (*          i ~~> (min (iv + 1) (length l)) \* *)
+  (*          j ~~> (List.length (List.filter f_p D_pre')) \* *)
+  (*          data ~> Array ((List.filter f_p D_pre') ++ list_drop (List.length (List.filter f_p D_pre')) D) *)
+  (*      ) *)
+  (*   ). *)
+  (* { *)
+  (*   intros iv Hiv. *)
+  (*   case_eq (list_take_drop (to_nat iv) D); intros D_pre D_post HDiv. *)
+  (*   case_eq (list_take_drop (to_nat (min (iv + 1) (length l))) D); intros D_pre' D_post' HDiv'. *)
+  (*   xapp. *)
+  (*   apply Body_loop. *)
+  (*   xsimpl. *)
 
-  }
+  (* } *)
 
-  xapp.
-  xseq.
-  xwhile_inv_basic_measure (fun (b: bool) (m: int) => \[True]).
-  xwhile_inv_skip.
-  xgo.
-  xseq.
-  xgo.
+  (* xapp. *)
+  (* xseq. *)
+  (* xwhile_inv_basic_measure (fun (b: bool) (m: int) => \[True]). *)
+  (* xwhile_inv_skip. *)
+  (* xgo. *)
+  (* xseq. *)
+  (* xgo. *)
 
   
+Admitted.

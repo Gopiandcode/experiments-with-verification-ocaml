@@ -6,8 +6,14 @@
           Seq_to_array_old Verify_seq_to_array_old
           Vector_filter_old Verify_vector_filter_old
           Vector_filter_new
+          Cascade Cascade_Spec
 ))
 
+(rule
+ (target Cascade.v)
+ (deps ../lib/cascade.ml)
+ (action (run cfmlc -o ./Cascade.v ../lib/cascade.ml))
+)
 
 (rule
  (target Refs.v)
