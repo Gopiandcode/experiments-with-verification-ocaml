@@ -18,47 +18,7 @@ Definition Vector A `{Enc A} (l: list A) (p: loc) : hprop :=
      (* D shares a prefix with l *)
       \[ D = l ++ G ].
 
-
-Fixpoint list_drop (A: Type) (n: nat) (ls: list A) :=
-  match n, ls with
-  | O, rest => rest
-  | S n, h :: t => drop n t
-  | S n, nil => nil
-  end.
-
-
-Fixpoint list_take_drop (A: Type) (n: nat) (ls: list A) :=
-  match n, ls with
-  | O, rest => (nil, rest)
-  | S n, h :: t =>
-      let (take, drop) := list_take_drop n t in
-      (h :: take, drop)
-  | S n, nil => (nil, nil)
-  end.
-
-Eval compute in (list_take_drop 3 (1 :: 2 :: 3 :: 4 :: 5 :: nil)).
-
-Lemma list_take_drop_split (A: Type): forall (n: nat) (ls: list A),
-    (n <= List.length ls)%nat ->
-    let (take, drop) := list_take_drop n ls in
-    ls = take ++ drop.
-Proof.
-  intros n ls; gen n; induction ls.
-  - intros n. simpl. intros Hltn0. apply le_n_0_eq in Hltn0.
-    rewrite <- Hltn0; simpl. rewrite app_nil_r.
-    auto.
-  - simpl. intros n; case n; simpl.
-    * intros _. rewrite app_nil_l. auto.
-    * clear n; intros n Hn. apply le_S_n in Hn.
-      pose proof (IHls n Hn).
-      case_eq (list_take_drop n ls); intros take' drop' Heq.
-      rewrite Heq in H.
-      rewrite H.
-      rewrite app_cons_l.
-      auto.
-Qed.
-
-Lemma filter'_spec (A: Type) `{EA: Enc A} : forall (l: list A) (p:loc) (f: val) (f_p: A -> bool)
+Lemma filter'_spec (A: Type) `{EA: Enc A} `{IA: Inhab A} : forall (l: list A) (p:loc) (f: val) (f_p: A -> bool)
                             (* (f_p: A -> bool) *),
     (forall (x: A),
         SPEC_PURE (f x)
@@ -68,13 +28,52 @@ Lemma filter'_spec (A: Type) `{EA: Enc A} : forall (l: list A) (p:loc) (f: val) 
     PRE (Vector l p)
     POSTUNIT (Vector (List.filter f_p l) p).
 Proof.
-  intro l; induction_wf IH: list_sub l. intros.
   xcf.
-  xapp;=>i.
-  xapp;=>j.
+  xapp;=>i. xapp;=>j.
   xunfold Vector; xpull;=> data D G HD.
   xapp.
   xlet.
+  xseq.
+  asserts loop_spec:  (
+          forall (iv jv: int),
+          0 <= iv -> 0 <= jv ->
+          jv <= length (filter f_p l) ->
+          jv <= iv ->
+          iv <= length l ->
+          SPEC (loop tt)
+          PRE ( i ~~> iv \* j ~~> jv \*
+             data ~> Array ((take jv (filter f_p l)) ++
+                            drop jv D))
+          INV (p ~~~> `{ vec' := data; size' := length l})
+          POST (fun (_:  unit) => 
+             i ~~> (length l) \* j ~~> (length (filter f_p l)) \*
+             data ~> Array ((filter f_p l) ++ drop (length (filter f_p l)) D))). {
+    intros iv.
+    induction_wf IH: (upto (length l)) iv.
+    intros jv Hivgt Hjvgt Hjvsem Hivjv Hivlt; apply Spec_loop; clear Spec_loop.
+    xapp.
+    xif ;=> Hiv.
+    - xapp.
+      xapp.
+      xapp. {
+        apply int_index_prove; try math.
+        rewrite <- length_eq.
+        rewrite length_app.
+        rewrite length_take_nonneg; try math.
+        rewrite length_drop_nonneg; try (rewrite HD; rew_list; math).
+      }
+      rewrite read_app.
+      assert (length (take jv (filter (fun x : A => f_p x) l)) <= iv).
+      eapply lt_le_trans.
+
+      xapp (H (take jv (filter (fun x : A => f_p x) l) ++ drop jv D)[iv]).
+      xif.
+      *
+
+  }
+  xapp loop_spec.
+
+  xapp.
   cuts HSpec:
     (forall (iv: int), iv <= length l ->
                          let (D_pre, D_post) := list_take_drop (Z.to_nat iv) D in
