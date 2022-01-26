@@ -7,7 +7,7 @@ Generalizable Variables A.
 Implicit Types n m: int.
 Implicit Types p q : loc.
 
-From Proofs Require Import Seq_to_array_old.
+From Proofs Require Import Seq_to_array_new.
 
 (** Lazy values: a lazy value of type [a] is represented at type [unit->'a].
     [Lazyval P f] asserts that [f] is a lazy value whose evaluation produces
@@ -154,39 +154,251 @@ Qed.
 
 Hint Extern 1 (RegisterSpec iteri) => Provide iteri_spec.
 
+Lemma list_fold_spec : forall A `{EA: Enc A} B `{EB: Enc B}
+                              (f: func) (init: B) (l: list A),
+  forall (I: list A -> B -> hprop),
+  (forall acc v t r, (l = t++v::r) ->
+     SPEC (f acc v)
+     PRE (I t acc)
+     POST (fun acc => I (t&v) acc)) ->
+  SPEC (List_ml.fold_left f init l)
+    PRE (I nil init)
+    POST (fun acc => I l acc).
+Proof using.
+  intros A EA B EB f init l I f_spec. gen init.
+  cuts G: (forall r t init,
+              l = t ++ r ->
+              SPEC (List_ml.fold_left f init r)
+              PRE I t init
+              POST (fun acc : B => I l acc)).
+  { intros init; applys~ (G l nil init). }
+  intros r. induction_wf IH: list_sub r.
+  intros t init Ht. xcf.
+  xmatch.
+  - xvals.
+    rewrite Ht. rewrite <- TEMP; rew_list; xsimpl.
+  - xapp (f_spec init a t l1); auto. { rewrite Ht. rewrite TEMP. auto. }
+    intros acc.
+    xapp. rewrite <- TEMP. apply list_sub_cons. { rew_list; try rewrite TEMP; auto. }
+    xsimpl.
+Qed.
+
+Lemma list_fold_length_rev : forall A (xs : list A), 
+    List.fold_left
+         (fun (pair0 : credits * list A) (x : A) =>
+            let (i, acc) := pair0 in (i + 1, x :: acc)) xs (0, nil) =
+      (length xs, rev xs).
+Proof.
+  intros A.
+  cuts G: (forall (xs : list A)  (i: int) (init: list A),
+          List.fold_left
+            (fun (pair0 : credits * list A) (x : A) =>
+               let (i, acc) := pair0 in (i + 1, x :: acc))
+            xs (i, init) = (i + length xs, rev xs ++ init)). {
+    intros xs; rewrite G. f_equal; rew_list; auto.
+  }
+  intros xs; induction xs as [| x xs IHxs]; simpl.
+  - intros i init; rew_list; f_equal; auto; math.
+  - intros i init; simpl.
+    rewrite IHxs.
+    rewrite !length_cons.
+    f_equal; try math. rew_list; auto.
+Qed.
+
+Lemma drop_last: forall A (xs rst: list A) (lst: A),
+    rev xs = lst :: rst ->
+    drop (length xs - 1) xs = lst :: nil.
+Proof.
+  intros A xs. induction_wf IH: list_sub xs.
+  case_eq xs.
+  - intros Hxs rst lst; rewrite rev_nil; intros H; inversion H.
+  - intros hd tl Hxs; intros rst lst Hlst; rewrite length_cons.
+    math_rewrite ((1 + length tl - 1) = length tl).
+    case_eq tl.
+    * intros Htl. rewrite Htl in *. rewrite rev_cons in Hlst.
+      rewrite last_nil in Hlst.
+      rewrite length_nil; rewrite drop_zero.
+      f_equal. inversion Hlst; auto.
+    * intros y ys Hys; rewrite length_cons.
+      math_rewrite (1 + length ys = length ys + 1).
+      rewrite drop_cons; try math.
+      asserts Hlen: ((length ys) = length (y :: ys) - 1). {
+        rewrite length_cons; math.
+      } rewrite Hlen; clear Hlen.
+      rewrite <- Hys.
+      rewrite rev_cons in Hlst.
+      rewrite <- (app_cons_one_r lst) in Hlst.
+      assert (lst :: nil = nil & lst) by  (rew_list; auto).
+      rewrite H in Hlst.
+      assert (Hlst' := Hlst).
+      apply last_eq_middle_inv in Hlst.
+      case Hlst; clear Hlst.
+      ** intros [Htl [Hlsthd Hrd] ].
+         (* B109 *)
+         apply rev_eq_nil_inv in Htl.
+         rewrite Htl in Hys; inversion Hys.
+      ** intros [rst_but_last Hrst].
+         eapply (IH tl _ rst_but_last lst).
+         rewrite Hrst in Hlst'.
+         rewrite <- last_app in Hlst'.
+         apply last_eq_last_inv in Hlst'.
+         case Hlst' as [H1 H2].
+         rewrite H1.
+         rewrite app_last_l.
+         rewrite app_nil_l.
+         auto.
+         Unshelve.
+         rewrite Hxs. apply list_sub_cons.
+Qed.    
+
+Lemma drop_nth : forall A l v r i (xs: list A),
+    xs = l ++ v :: r ->
+    i = length l ->
+    drop i xs = v :: drop (i + 1) xs.
+Proof.
+  intros A l v r i xs -> ->.
+  rewrite drop_app_length.
+  rewrite app_cons_r.
+  assert ((length l + 1) = length (l & v)) as H by (rewrite length_last; math).
+  rewrite H.
+  rewrite drop_app_length.
+  auto.
+Qed.
+
+Lemma case_rev_split : forall A (xs: list A) v l r,
+    rev xs = l ++ v :: r ->
+    xs = rev r ++ v :: rev l.
+Proof.
+  intros A xs; induction xs.
+  - intros v l r; rewrite rev_nil; intros Hnil.
+    apply nil_eq_app_inv in Hnil. case Hnil as [H1 H2].
+    inversion H2.
+  - intros v l r. 
+    intros Hr; assert (Hr' := Hr).
+    rewrite rev_cons in Hr. rewrite (app_cons_r v) in Hr.
+    apply last_eq_middle_inv in Hr.
+    case Hr.
+    * intros [Hrevls [Ha Hnil]].
+      rewrite Hnil. rewrite rev_nil.
+      rewrite app_nil_l. rewrite Ha.
+      apply f_equal.
+      rewrite <- Hrevls.
+      rewrite rev_rev.
+      auto.
+    * intros [pre Hrpre].
+      rewrite Hrpre in Hr'.
+      rewrite rev_cons in Hr'.
+      rewrite <- last_cons in Hr'.
+      rewrite <- last_app in Hr'.
+      apply last_eq_last_inv in Hr'.
+      case Hr' as [H1 H2].
+      rewrite (IHxs _ _ _ H1).
+      rewrite Hrpre.
+      rewrite rev_last.
+      rew_list.
+      auto.
+Qed.      
+
 Lemma to_array_spec : forall A `{EA:Enc A} (l:list A) (s:func),
   SPEC (to_array s)
     PRE (\[LSeq l s])
     POST (fun a => a ~> Array l).
 Proof using.
   xcf.
+  xlet (fun (f: func) =>
+     forall (i: int) (acc: list A) (x: A),
+       SPEC_PURE (f (i,acc) x)
+                 POST \[= (i + 1, x :: acc)]).
+  { xmatch. xvals. auto. } 
   xpull ;=> HLseq; apply LSeq_if in HLseq.
+  xapp (@fold_spec _ _ _ _ l f0__ (0, nil) s
+                   (fun (pair: int * list A) (x: A) =>
+                      let (i, acc) := pair in
+                      (i + 1, x :: acc))); auto.
+  { intros [i acc] x. xapp. xsimpl. auto. }
+  { apply LSeq_intro; auto. }
+  clear Spec_f0__.
+  xmatch. 
+  rewrite list_fold_length_rev in H0.
+  inversion H0 as [Hlen].
   case_eq l.
-  - intros ->; xapp; xmatch. xapp;=> x; xsimpl.
-  - intros x xs Hl; rewrite Hl in *; xapp ;=> result [nxt_r [-> Hnxt_r]].
-    xmatch.
-    xapp length_spec. { apply LSeq_intro; auto. applys HLseq. }
+  - intros ->. xmatch. xapp;=> x; xsimpl.
+  - intros x xs Hl; rewrite Hl in *.
+    xmatch. { apply nil_eq_rev_inv in H2. inversion H2. }
     xapp. { math. } => arr data Hdata.
     xlet.
-    xseq.
-    xapp (@iteri_spec A EA l f0__ s (fun ls => arr ~> Array (ls ++ (make (length l - length ls) x)) )).
+    xlet.
+    xapp (@list_fold_spec A EA int _ f1__ idx rest (fun t i =>
+        \[i = length l - length t - 2] \*
+        arr ~> Array ((make (i + 1) init) ++ 
+                                 drop (i + 1) l)
+         )).
     * {
-      intros y t ys i IHl IHi.
-      xapp Spec_f0__; clear Spec_f0__.
-      xapp.
-      rewrite IHl; rewrite IHi.
-      apply int_index_prove; try math.
-      rewrite <- length_eq. rewrite !length_app. rewrite length_cons. rewrite length_make; try math.
-      xsimpl.
-      rewrite length_last. math_rewrite ((length l - (1 + length t)) = ((length l - length t) - 1)).
-      rewrite (@update_app_r _  _ 0 _ _ _ y IHi); try math.
-      rewrite app_last_l.
-      apply f_equal.
-      rewrite make_eq_cons_make_pred; try (rewrite IHl; rewrite length_app; rewrite length_cons; math).
-      rewrite update_zero.
-      auto.
-    }
-    * apply LSeq_intro; rewrite Hl; eapply HLseq.
-    * rew_list; math_rewrite ((length l - 0) = length l); rewrite Hl; auto.
-    * xvals. math_rewrite ((length l - length l) = 0); rewrite make_zero; rew_list; auto.
-Qed.      
+        introv Hrst. apply Spec_f1__; clear Spec_f1__.
+        assert (length (init :: rest) = length l) as Htmp by
+                (rewrite H2; rewrite length_rev; rewrite Hl; auto).
+        rewrite length_cons in Htmp.
+        rewrite Hrst in Htmp; rewrite length_app in Htmp.
+        rewrite length_cons in Htmp.
+        xpull ;=> Hacc.
+        xseq.
+        xapp. {
+            apply int_index_prove; try math.
+            rewrite Hacc.
+            rewrite <- length_eq.  rewrite length_app.
+            rewrite length_make; try math.
+        }
+        xvals.
+        {
+          rewrite Hacc. rewrite <- Htmp.
+          rewrite length_last. math.
+        }
+        rewrite update_app_l; try (rewrite length_make; math).        
+        rewrite make_succ_r; try math.
+        rewrite (@update_middle _ acc (make acc init) nil v init);
+          try (rewrite length_make; math).
+        rewrite app_nil_r.
+        math_rewrite ((acc - 1 + 1) = acc).
+        rewrite app_last_l.
+        cut (v :: drop (acc + 1) l = drop acc l). {
+          intros ->; auto.
+        }
+        rewrite Hl.
+        rewrite Hrst in H2.
+        rewrite <- app_cons_l in H2.
+        symmetry in  H2.
+        pose proof (case_rev_split (x :: xs) v (init :: t) r H2) as H1.
+        rewrite H1.
+        assert (length (rev r) = acc) as Hr by (rewrite length_rev; math).
+        assert (length (rev r & v) = acc + 1) as Hrev by
+          (rewrite length_last; rewrite length_rev; math).
+        rewrite  app_cons_r at 1; rewrite <- Hrev at 1.
+        rewrite <- Hr at 1.
+        rewrite !drop_app_length.
+        auto.
+      }
+    * rewrite Pidx. rewrite Hl. rewrite length_cons. rewrite length_nil. math.
+    * {
+        rewrite Hl; rewrite Pidx; rewrite !length_cons.
+        math_rewrite ((1 + length xs - 2 + 1) = length xs).
+        assert (length xs = length (x :: xs) - 1) as H' by (rewrite length_cons; math).
+        rewrite H' at 2. symmetry in H2. rewrite (drop_last (x :: xs) H2).
+        rewrite <- make_succ_r; try math.
+        rewrite Hdata. rewrite length_cons.
+        math_rewrite (1 + length xs = length xs + 1); auto.
+      }
+    * {
+        intros i Hi. xmatch. xvals.
+        rewrite Hi.
+        assert (length (init :: rest) = length l) as Htmp by
+            (rewrite H2; rewrite length_rev; rewrite Hl; auto).
+        rewrite length_cons in Htmp.
+        assert (length rest = length l - 1) as Hrest by math.
+        clear Htmp. rewrite Hrest.
+        math_rewrite
+          ((length l - (length l - 1) - 2 + 1) = 0).
+        rewrite make_zero; rewrite drop_zero.
+        rewrite app_nil_l.
+        auto.
+      }
+Qed.
