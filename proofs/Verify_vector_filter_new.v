@@ -7,7 +7,7 @@ Generalizable Variables A IA.
 Implicit Types n m: int.
 Implicit Types p q : loc.
 
-From Proofs Require Import Vector_filter_old.
+From Proofs Require Import Vector_filter_new.
 
 Lemma filter_eq: forall A (f: A -> bool) l,
     filter f l = List.filter f l.
@@ -184,6 +184,22 @@ Definition Vector A `{Enc A} (l: list A) (p: loc) : hprop :=
      (* D shares a prefix with l *)
       \[ D = l ++ G ].
 
+Lemma array_fill_app: forall (A: Type) `{EA: Enc A} (i j: int) (x: A) (l m r : list A) data,
+  i = length l -> j = length m ->
+  SPEC (Array_ml.fill data i j x)
+  PRE (data ~> Array (l ++ m ++ r))
+  POSTUNIT (data ~> Array (l ++ make j x ++ r)).
+Proof.
+  intros A EA i j x l m r data Hi Hj; xcf.
+  xseq.
+  xassert. {
+  xif; try (intros Hfalse; math); intros Higt0.
+  xif; try (intros Hfalse; math); intros Hjgt0.
+  xapp; xvals. xvals. rewrite !length_app; rewrite <- Hi; rewrite <- Hj; math.
+  }
+Admitted.
+  
+
 Lemma filter'_spec (A: Type) `{EA: Enc A} `{IA: Inhab A} : forall (l: list A) (p:loc) (f: val) (f_p: A -> bool),
     (forall (x: A),
         SPEC_PURE (f x)
@@ -350,6 +366,16 @@ Proof.
   xapp loop_spec; try math;
     try (rewrite take_zero; rewrite filter_nil; rewrite length_nil; auto).
   xapp.
+  xif ;=> Hlengt0;   try (xvals; xif ;=> Hf; try (xvals; xapp; try (xapp; xsimpl; try auto; try math; try (rewrite filter_eq; auto))); try ((contradiction Hf; try exact I))).
+  xapp. xapp. xvals.
+  xif ;=> Hlenltlen;
+    try (xvals; xapp; try (xapp; xsimpl; try auto; try math; try (rewrite filter_eq; auto))).
+  xapp. xapp.
+  apply int_index_prove; try math;
+    try (rewrite <- length_eq; rewrite length_app; math).
+  xapp. xapp. xapp. xapp.
+  rewrite HD at 1. rewrite drop_app_l; try math. 
+  xapp array_fill_app; try auto; try (rewrite length_drop_nonneg; math).
   xapp.
-  xsimpl; try auto; try math; try (rewrite filter_eq; auto).
+  xapp; xsimpl; try auto; try math; try (rewrite filter_eq; auto).
 Qed.
