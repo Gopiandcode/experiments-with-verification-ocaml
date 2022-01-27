@@ -6,7 +6,7 @@
           Seq_to_array_old Verify_seq_to_array_old
           Seq_to_array_new Verify_seq_to_array_new
           Vector_filter_old Verify_vector_filter_old
-          Vector_filter_new
+          Vector_filter_new Verify_vector_filter_new
 ))
 
 
