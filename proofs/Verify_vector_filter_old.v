@@ -9,6 +9,16 @@ Implicit Types p q : loc.
 
 From Proofs Require Import Vector_filter_old.
 
+Lemma filter_eq: forall A (f: A -> bool) l,
+    filter f l = List.filter f l.
+Proof.
+  intros A f l; induction l.
+  - simpl; rewrite filter_nil; auto.
+  - simpl; rewrite filter_cons.
+    rewrite If_istrue; case_eq (f a); simpl; intros Hfa;
+    rewrite IHl; auto.
+Qed.
+
 Lemma drop_cons_unfold : forall A `{IA: Inhab A} (l: list A) i,
     0 <= i < length l ->
     drop i l = l[i] :: drop (i + 1) l.
@@ -32,7 +42,7 @@ Proof.
 Qed.
 
 Lemma take_last_unfold : forall A `{IA: Inhab A} (l: list A) i,
-    0 < i < length l ->
+    0 < i <= length l ->
     take i l = take (i - 1) l & l[i - 1].
 Proof.
   intros A IA l; induction l.
@@ -147,10 +157,23 @@ Proof.
 Qed.
 
 Lemma filter_take_propagate: forall A `{IA: Inhab A} (l: list A) (f: A -> bool) iv jv,
-    f l[iv] ->
+    f l[iv] -> 0 <= iv < length l ->
     jv = length (filter (fun x : A => f x) (take iv l)) ->
     (filter (fun x : A => f x) l)[jv] = l[iv].
-    
+Proof.
+  introv Hfliv [Hlen_gt Hlen] Hjv.
+  pose proof (length_filter_take_leq_base f l Hlen_gt) as Hjvlen.
+  rewrite <- Hjv in Hjvlen.
+  rewrite <- (@list_eq_take_app_drop _ iv l) at 1; try math.
+  rewrite filter_app.
+  rewrite read_app.
+  rewrite If_r; try math.
+  rewrite <- Hjv.
+  math_rewrite (jv - jv = 0).
+  rewrite (@drop_cons_unfold A IA); try (split; math).
+  rewrite filter_cons; rewrite If_l; auto; rewrite read_zero.
+  auto.
+Qed.  
 
 Definition Vector A `{Enc A} (l: list A) (p: loc) : hprop :=
   \exists (data: loc) (D: list A) (G: list A),
@@ -161,15 +184,14 @@ Definition Vector A `{Enc A} (l: list A) (p: loc) : hprop :=
      (* D shares a prefix with l *)
       \[ D = l ++ G ].
 
-Lemma filter'_spec (A: Type) `{EA: Enc A} `{IA: Inhab A} : forall (l: list A) (p:loc) (f: val) (f_p: A -> bool)
-                            (* (f_p: A -> bool) *),
+Lemma filter'_spec (A: Type) `{EA: Enc A} `{IA: Inhab A} : forall (l: list A) (p:loc) (f: val) (f_p: A -> bool),
     (forall (x: A),
         SPEC_PURE (f x)
          POST \[= f_p x]
     ) ->
     SPEC (filter'__ f p)
-    PRE (Vector l p)
-    POSTUNIT (Vector (List.filter f_p l) p).
+    PRE (p ~> Vector l)
+    POSTUNIT (p ~> Vector (List.filter f_p l)).
 Proof.
   xcf.
   xapp;=>i. xapp;=>j.
@@ -289,93 +311,45 @@ Proof.
              rewrite (@drop_cons_unfold A IA);
                try (rewrite HD; rew_list; math).
              rewrite (@take_last_unfold A IA _ (jv + 1)); try split; try math.
-             
+             math_rewrite (jv + 1 - 1 = jv).
+             rewrite (@filter_take_propagate A IA l f_p jv jv); try auto; try math.
+             rewrite Hliv; rewrite app_cons_r; auto.
+             rewrite <- (@list_eq_take_app_drop _ (jv + 1) l) at 1; try math.
+             rewrite filter_app; rewrite length_app.
+             rewrite (@length_filter_succ _ IA); try math.
+             rewrite Hfp_iv; rewrite <- Hjvsem.
+             math.
            }
-           { rewrite read_app; try math.
-               rewrite length_take; try math.
-               rewrite If_r; try math.
-               math_rewrite (iv - Z.max 0 jv = iv - jv).
-               rewrite HD.
-               rewrite read_drop; try (rew_list; math);
-               try (apply int_index_prove; try math; rew_list; math).
-               math_rewrite (jv + (iv - jv) = iv).
-               rewrite read_app.
-               rewrite If_l; try math.
-               erewrite (@update_app_r _ _ 0 _ jv); try math;
-                 try (rewrite length_take; try math).
-               rewrite (@take_filter_succ A IA _ l iv jv); auto.
-               case_eq l;
-                 try (intro Hnil; rewrite Hnil in Hiv; rewrite length_nil in Hiv; math).
-               intros l_fst l_lst Hl_fst.
-               rewrite drop_write_zero; try (rew_list; math);
-                 try (rewrite <- Hl_fst; rewrite length_app; math).
-               rewrite app_cons_r. auto.
-             }
-             {
-               xsimpl.
-             }
-
-           xapp; try math.
-
-        contradiction Hcond.
+           {
+             xsimpl.
+           }
+      * xapp.
+        xapp; try math. { unfold upto; split; try math. }
+        {
+          rewrite (@length_filter_succ A IA); try math.
+          rewrite <- If_istrue; rewrite If_r; auto.
+          math.
+        }
+        {
+          xsimpl.
+        }
+      * rewrite Hjvsem.
+        rewrite <- (@list_eq_take_app_drop _ iv l) at 2; try math.
+        rewrite filter_app; rewrite length_app.
         math.
-
+    - xvals; try math.
+      {
+        assert (iv = length l) as Hleniv by math.
+        rewrite Hjvsem; rewrite Hleniv; rewrite take_full_length; auto.
+      }
+      {
+        assert (iv = length l) as Hleniv by math.
+        rewrite Hjvsem; rewrite Hleniv; rewrite !take_full_length; auto.
+      }      
   }
-  xapp loop_spec.
-
+  xapp loop_spec; try math;
+    try (rewrite take_zero; rewrite filter_nil; rewrite length_nil; auto).
   xapp.
-  cuts HSpec:
-    (forall (iv: int), iv <= length l ->
-                         let (D_pre, D_post) := list_take_drop (Z.to_nat iv) D in
-                         let (D_pre', D_post') := list_take_drop (Z.to_nat (min (iv + 1) (length l))) D in
-                         SPEC (loop val_unit)
-                              PRE (
-                                i ~~> iv \*
-                                  j ~~> (List.length (List.filter f_p D_pre)) \*
-                                  data ~> Array ((List.filter f_p D_pre) ++ list_drop (List.length (List.filter f_p D_pre)) D)
-                              )
-                              POSTUNIT (
-                                i ~~> (min (iv + 1) (length l)) \*
-                                  j ~~> (List.length (List.filter f_p D_pre')) \*
-                                  data ~> Array ((List.filter f_p D_pre') ++ list_drop (List.length (List.filter f_p D_pre')) D)
-                              )
-    ).
-  
-
-  (* xletrec *)
-  (*   (fun (f: val) => *)
-  (*      forall (iv: int), iv <= length l -> *)
-  (*      let (D_pre, D_post) := list_take_drop (Z.to_nat iv) D in *)
-  (*      let (D_pre', D_post') := list_take_drop (Z.to_nat (min (iv + 1) (length l))) D in *)
-  (*      SPEC (f val_unit) *)
-  (*      PRE ( *)
-  (*          i ~~> iv \* *)
-  (*          j ~~> (List.length (List.filter f_p D_pre)) \* *)
-  (*          data ~> Array ((List.filter f_p D_pre) ++ list_drop (List.length (List.filter f_p D_pre)) D) *)
-  (*      ) *)
-  (*      POSTUNIT ( *)
-  (*          i ~~> (min (iv + 1) (length l)) \* *)
-  (*          j ~~> (List.length (List.filter f_p D_pre')) \* *)
-  (*          data ~> Array ((List.filter f_p D_pre') ++ list_drop (List.length (List.filter f_p D_pre')) D) *)
-  (*      ) *)
-  (*   ). *)
-  (* { *)
-  (*   intros iv Hiv. *)
-  (*   case_eq (list_take_drop (to_nat iv) D); intros D_pre D_post HDiv. *)
-  (*   case_eq (list_take_drop (to_nat (min (iv + 1) (length l))) D); intros D_pre' D_post' HDiv'. *)
-  (*   xapp. *)
-  (*   apply Body_loop. *)
-  (*   xsimpl. *)
-
-  (* } *)
-
-  (* xapp. *)
-  (* xseq. *)
-  (* xwhile_inv_basic_measure (fun (b: bool) (m: int) => \[True]). *)
-  (* xwhile_inv_skip. *)
-  (* xgo. *)
-  (* xseq. *)
-  (* xgo. *)
-
-  
-Admitted.
+  xapp.
+  xsimpl; try auto; try math; try (rewrite filter_eq; auto).
+Qed.
