@@ -111,7 +111,7 @@ Proof.
 Qed.
 
 Lemma take_filter_succ: forall A `{IA: Inhab A} (f: A -> bool) (l: list A) iv jv,
-    f l[iv] -> jv < iv -> iv < length l ->
+    f l[iv] -> jv <= iv -> iv < length l ->
     jv = length (filter (fun x : A => f x) (take iv l)) ->
     take (jv + 1) (filter (fun x : A => f x) l) =
       take jv (filter (fun x : A => f x) l) & l[iv].
@@ -242,10 +242,6 @@ Proof.
       xapp (H l[iv]).
       xif ;=> Hfp_iv.
       * xapp. xapp.
-        xif.
-        ** intro Higt.
-           xapp.
-           xapp.
            xapp. {
              apply int_index_prove; try math.
              rewrite <- length_eq.
@@ -297,46 +293,21 @@ Proof.
                xsimpl.
              }
            }
-        ** intros Hcond.
-           assert (iv = jv) as Heq by math.
-           xvals.
-           xseq.
-           xapp.
-           xapp.
+      * xapp.
            xapp; try math. { unfold upto; split; try math. }
            { rewrite (@length_filter_succ A IA);
-               try math; rewrite Hjvsem; rewrite Hfp_iv; auto. }
-           {
-             rewrite Heq in *.
-             rewrite (@drop_cons_unfold A IA);
-               try (rewrite HD; rew_list; math).
-             rewrite (@take_last_unfold A IA _ (jv + 1)); try split; try math.
-             math_rewrite (jv + 1 - 1 = jv).
-             rewrite (@filter_take_propagate A IA l f_p jv jv); try auto; try math.
-             rewrite Hliv; rewrite app_cons_r; auto.
-             rewrite <- (@list_eq_take_app_drop _ (jv + 1) l) at 1; try math.
-             rewrite filter_app; rewrite length_app.
-             rewrite (@length_filter_succ _ IA); try math.
-             rewrite Hfp_iv; rewrite <- Hjvsem.
+               try math; rewrite Hjvsem; auto.
+             apply Bool.ReflectF in Hfp_iv. apply Bool.reflect_iff in Hfp_iv as [Hfp1 Hfp2]. destruct (f_p l[iv]) as [ | ]. pose proof (Hfp1 istrue_true). discriminate.
              math.
            }
            {
              xsimpl.
            }
-      * xapp.
-        xapp; try math. { unfold upto; split; try math. }
-        {
-          rewrite (@length_filter_succ A IA); try math.
-          rewrite <- If_istrue; rewrite If_r; auto.
-          math.
-        }
-        {
-          xsimpl.
-        }
-      * rewrite Hjvsem.
-        rewrite <- (@list_eq_take_app_drop _ iv l) at 2; try math.
-        rewrite filter_app; rewrite length_app.
-        math.
+      * 
+      rewrite Hjvsem.
+      rewrite <- (@list_eq_take_app_drop _ iv l) at 2; try math.
+      rewrite filter_app; rewrite length_app. math.
+      (*   math. *)
     - xvals; try math.
       {
         assert (iv = length l) as Hleniv by math.
@@ -345,7 +316,7 @@ Proof.
       {
         assert (iv = length l) as Hleniv by math.
         rewrite Hjvsem; rewrite Hleniv; rewrite !take_full_length; auto.
-      }      
+      } 
   }
   xapp loop_spec; try math;
     try (rewrite take_zero; rewrite filter_nil; rewrite length_nil; auto).

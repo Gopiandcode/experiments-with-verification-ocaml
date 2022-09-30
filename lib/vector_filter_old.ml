@@ -13,7 +13,7 @@ type 'a t = {
        if p v.vec.(! i) then (
          (* move element i at the first empty slot.
             invariant: i >= j*)
-         if !i > !j then v.vec.(!j) <- v.vec.(!i);
+         v.vec.(!j) <- v.vec.(!i);
          incr i;
          incr j
        ) else incr i;
