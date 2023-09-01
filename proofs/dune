@@ -1,13 +1,10 @@
 (coq.theory
  (name Proofs)
- (modules Stack VerifyStack Quadtree VerifyQuadtree Refs VerifyRefs
-          List_set_at_ind_old Verify_list_set_at_ind_old
-          List_set_at_ind_new Verify_list_set_at_ind_new
-          Seq_to_array_old Verify_seq_to_array_old
-          Seq_to_array_new Verify_seq_to_array_new
-          Vector_filter_old Verify_vector_filter_old
-          Vector_filter_new Verify_vector_filter_new
-))
+ (modules
+    Counter VerifyCounter
+    Refs VerifyRefs
+    List_set_at_ind_new Verify_list_set_at_ind_new
+    Seq_to_array_old Verify_seq_to_array_old))
 
 
 (rule
@@ -16,23 +13,7 @@
  (action (run cfmlc -o ./Refs.v ../lib/refs.ml))
 )
 
-(rule
- (target Stack.v)
- (deps ../lib/stack.ml)
- (action (run cfmlc -o ./Stack.v ../lib/stack.ml))
-)
 
-(rule
- (target Quadtree.v)
- (deps ../lib/quadtree.ml)
- (action (run cfmlc -o ./Quadtree.v ../lib/quadtree.ml))
-)
-
-(rule
- (target List_set_at_ind_old.v)
- (deps ../lib/list_set_at_ind_old.ml)
- (action (run cfmlc -o ./List_set_at_ind_old.v ../lib/list_set_at_ind_old.ml))
-)
 
 (rule
  (target List_set_at_ind_new.v)
@@ -47,20 +28,9 @@
 )
 
 (rule
- (target Seq_to_array_new.v)
- (deps ../lib/seq_to_array_new.ml)
- (action (run cfmlc -o ./Seq_to_array_new.v ../lib/seq_to_array_new.ml))
+ (target Counter.v)
+ (deps ../lib/counter.ml)
+ (action (run cfmlc -o ./Counter.v ../lib/counter.ml))
 )
 
-(rule
- (target Vector_filter_old.v)
- (deps ../lib/vector_filter_old.ml)
- (action (run cfmlc -o ./Vector_filter_old.v ../lib/vector_filter_old.ml))
-)
-
-(rule
- (target Vector_filter_new.v)
- (deps ../lib/vector_filter_new.ml)
- (action (run cfmlc -o ./Vector_filter_new.v ../lib/vector_filter_new.ml))
-)
 

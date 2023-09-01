@@ -1,7 +1,6 @@
-# Experiments with verifying OCaml code
+# Verifying OCaml Code with CFML
 
 This project consists of a series of experiments of verifying OCaml code in Coq.
-
 
 Once you have installed the requirements, build the programs and their proofs with dune:
 ```
@@ -30,11 +29,10 @@ opam install cfml coq-cfml
 .
 ├── lib                OCaml code
 ├── proofs             Coq proofs 
-├── src                Entry point
 ├── dune-project
 └── Readme.md
 
 
-4 directories, 2 files
+3 directories, 2 files
 ```
 
